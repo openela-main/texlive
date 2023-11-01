@@ -1,0 +1,812 @@
+diff -up texlive-20180414/source/libs/luajit/LuaJIT-src/src/host/minilua.c.me texlive-20180414/source/libs/luajit/LuaJIT-src/src/host/minilua.c
+--- texlive-20180414/source/libs/luajit/LuaJIT-src/src/host/minilua.c.me	2018-08-14 10:08:29.573912544 +0100
++++ texlive-20180414/source/libs/luajit/LuaJIT-src/src/host/minilua.c	2018-09-24 09:18:24.640331882 +0100
+@@ -4327,7 +4327,7 @@ if(lh->v.u.s.info==v->u.s.info){
+ conflict=1;
+ lh->v.u.s.info=extra;
+ }
+-if(lh->v.u.s.aux==v->u.s.info){
++if(lh->v.u.s.aux==v->u.s.aux){
+ conflict=1;
+ lh->v.u.s.aux=extra;
+ }
+diff -up texlive-20180414/source/libs/zziplib/zziplib-src/docs/make-doc.py.me texlive-20180414/source/libs/zziplib/zziplib-src/docs/make-doc.py
+--- texlive-20180414/source/libs/zziplib/zziplib-src/docs/make-doc.py.me	2018-08-14 10:34:45.827143276 +0100
++++ texlive-20180414/source/libs/zziplib/zziplib-src/docs/make-doc.py	2018-08-14 10:35:09.287578374 +0100
+@@ -951,7 +951,7 @@ def docbook_refpages_perheader(page_list
+             header[file].copyright = page.copyright
+         if not header[file].authors and page.authors:
+             header[file].authors = page.authors
+-        if not header[file].authors and page.authors_list:
++        if not header[file].authors_list and page.authors_list:
+             header[file].authors_list = page.authors_list
+         if not header[file].description:
+             found = m(commands.getoutput("cat "+o.package+".spec"),
+diff -up texlive-20180414/source/texk/dvipdfm-x/cid.c.me texlive-20180414/source/texk/dvipdfm-x/cid.c
+--- texlive-20180414/source/texk/dvipdfm-x/cid.c.me	2018-08-14 14:23:43.959754741 +0100
++++ texlive-20180414/source/texk/dvipdfm-x/cid.c	2018-09-24 10:52:23.863792313 +0100
+@@ -636,6 +636,7 @@ CIDFont_cache_find (const char *map_name
+                            CIDFONT_FLAG_TYPE1C)              < 0 &&
+         CIDFont_base_open (font, map_name, cmap_csi, opt)    < 0) {
+       CIDFont_release(font);
++      RELEASE(font);
+       release_opt(opt);
+       return -1;
+     } else {
+diff -up texlive-20180414/source/texk/dvipdfm-x/dvi.c.me texlive-20180414/source/texk/dvipdfm-x/dvi.c
+--- texlive-20180414/source/texk/dvipdfm-x/dvi.c.me	2018-08-14 14:31:53.138750339 +0100
++++ texlive-20180414/source/texk/dvipdfm-x/dvi.c	2018-08-14 14:41:37.729500250 +0100
+@@ -1001,8 +1001,11 @@ dvi_locate_native_font (const char *file
+     char     *enc_vec[256];
+ 
+     fp = DPXFOPEN(filename, DPX_RES_TYPE_T1FONT);
+-    if (!fp)
++    if (!fp) {
++      if (path)
++	free(path);
+       return -1;
++    }
+ 
+     if (!is_pfb(fp))
+       ERROR("Failed to read Type 1 font \"%s\".", filename);
+diff -up texlive-20180414/source/texk/dvipdfm-x/fontmap.c.me texlive-20180414/source/texk/dvipdfm-x/fontmap.c
+--- texlive-20180414/source/texk/dvipdfm-x/fontmap.c.me	2018-09-24 12:45:22.068268381 +0100
++++ texlive-20180414/source/texk/dvipdfm-x/fontmap.c	2018-09-24 12:45:13.508111517 +0100
+@@ -849,8 +849,8 @@ pdf_insert_fontmap_record (const char *k
+     subfont_ids = sfd_get_subfont_ids(sfd_name, &n);
+     if (!subfont_ids) {
+       RELEASE(fnt_name);
+-      RELEASE(sfd_name);
+       WARN("Could not open SFD file: %s", sfd_name);
++      RELEASE(sfd_name);
+       return NULL;
+     }
+     if (verbose > 3)
+diff -up texlive-20180414/source/texk/dvipdfm-x/otl_conf.c.me texlive-20180414/source/texk/dvipdfm-x/otl_conf.c
+--- texlive-20180414/source/texk/dvipdfm-x/otl_conf.c.me	2018-09-24 12:55:36.589529234 +0100
++++ texlive-20180414/source/texk/dvipdfm-x/otl_conf.c	2018-09-24 12:55:27.339359728 +0100
+@@ -83,6 +83,7 @@ parse_uc_coverage (pdf_obj *gclass, cons
+ 	  pdf_add_array(coverage,
+ 			pdf_link_obj(pdf_get_array(cvalues, i)));
+ 	}
++	RELEASE(glyphclass);
+       }
+       break;
+     default:
+diff -up texlive-20180414/source/texk/dvipdfm-x/otl_opt.c.me texlive-20180414/source/texk/dvipdfm-x/otl_opt.c
+--- texlive-20180414/source/texk/dvipdfm-x/otl_opt.c.me	2018-09-24 13:00:10.034538046 +0100
++++ texlive-20180414/source/texk/dvipdfm-x/otl_opt.c	2018-09-24 13:13:31.949224947 +0100
+@@ -134,6 +134,7 @@ parse_expr (const char **pp, const char
+         expr = parse_expr(pp, endptr);
+         if (!expr) {
+             WARN("Syntax error: %s\n", *pp);
++            bt_release_tree(root);
+             return NULL;
+         }
+         if (**pp != ')') {
+diff -up texlive-20180414/source/texk/dvipdfm-x/pdfdoc.c.me texlive-20180414/source/texk/dvipdfm-x/pdfdoc.c
+--- texlive-20180414/source/texk/dvipdfm-x/pdfdoc.c.me	2018-09-24 13:04:07.928895033 +0100
++++ texlive-20180414/source/texk/dvipdfm-x/pdfdoc.c	2018-09-24 13:04:39.329470128 +0100
+@@ -825,7 +825,7 @@ pdf_doc_close_page_tree (pdf_doc *p)
+     pdf_page  *page;
+ 
+     page = doc_get_page_entry(p, page_no);
+-    if (page->page_obj) {
++    if (page->page_ref) {
+       WARN("Nonexistent page #%ld refered.", page_no);
+       pdf_release_obj(page->page_ref);
+       page->page_ref = NULL;
+diff -up texlive-20180414/source/texk/dvipdfm-x/pdfencrypt.c.me texlive-20180414/source/texk/dvipdfm-x/pdfencrypt.c
+--- texlive-20180414/source/texk/dvipdfm-x/pdfencrypt.c.me	2018-09-24 13:05:05.679952732 +0100
++++ texlive-20180414/source/texk/dvipdfm-x/pdfencrypt.c	2018-09-24 13:10:25.655813021 +0100
+@@ -616,7 +616,7 @@ pdf_enc_set_passwd (unsigned int bits, u
+   }
+   if (uplain) {
+     if (preproc_password(uplain, upasswd, p->V) < 0)
+-      WARN("Invalid UTF-8 string for passowrd.");
++      WARN("Invalid UTF-8 string for password.");
+   } else {
+     while (1) {
+       strncpy(input, getpass("User password: "), MAX_PWD_LEN);
+diff -up texlive-20180414/source/texk/dvipdfm-x/pdfobj.c.me texlive-20180414/source/texk/dvipdfm-x/pdfobj.c
+--- texlive-20180414/source/texk/dvipdfm-x/pdfobj.c.me	2018-09-24 13:12:23.727975488 +0100
++++ texlive-20180414/source/texk/dvipdfm-x/pdfobj.c	2018-09-24 13:12:43.988346552 +0100
+@@ -1862,8 +1862,9 @@ apply_filter_TIFF2_1_2_4 (unsigned char
+         }
+       }
+     }
+-    if (outbits > 0)
++    if (outbits > 0) {
+       raster[k] = (outbuf << (8 - outbits)); k++;
++    }
+   }
+   RELEASE(prev);
+ }
+diff -up texlive-20180414/source/texk/dvipdfm-x/pkfont.c.me texlive-20180414/source/texk/dvipdfm-x/pkfont.c
+--- texlive-20180414/source/texk/dvipdfm-x/pkfont.c.me	2018-09-24 13:14:24.490187294 +0100
++++ texlive-20180414/source/texk/dvipdfm-x/pkfont.c	2018-09-24 13:17:33.873656807 +0100
+@@ -329,6 +329,7 @@ pk_decode_bitmap (pdf_obj *stream, uint3
+     }
+   }
+ 
++  free(rowptr);
+   return  0;
+ }
+ 
+diff -up texlive-20180414/source/texk/dvipdfm-x/spc_dvips.c.me texlive-20180414/source/texk/dvipdfm-x/spc_dvips.c
+--- texlive-20180414/source/texk/dvipdfm-x/spc_dvips.c.me	2018-09-24 13:20:43.777135845 +0100
++++ texlive-20180414/source/texk/dvipdfm-x/spc_dvips.c	2018-09-24 13:45:28.104313939 +0100
+@@ -402,6 +402,7 @@ spc_handler_ps_tricks_bput (struct spc_e
+       temporary_defs = dpx_create_temp_file();
+     if (!temporary_defs) {
+       WARN("Failed to create temporary input file for PSTricks image conversion.");
++      free(formula);
+       return  -1;
+     }
+ 
+@@ -455,7 +456,7 @@ spc_handler_ps_tricks_brotate (struct sp
+   if (calculate_PS(cmd, strlen(cmd), &value, 0, 0, 0, 0, 0) != 0)
+     return -1;
+   RAngles[RAngleCount] = value;
+-
++  free(cmd);
+   return  spc_handler_xtx_do_transform (spe->x_user, spe->y_user,
+       cos(value * M_PI / 180), sin(value * M_PI / 180),
+       -sin(value * M_PI / 180), cos(value * M_PI / 180),
+@@ -491,12 +492,17 @@ spc_handler_ps_tricks_transform (struct
+     concat[strlen(post)] = 0;
+     concat = strstr(cmd, "{");
+     *concat = ' ';
+-    if (calculate_PS(cmd, strlen(cmd), &d1, &d2, &d3, &d4, &d5, &d6) != 0)
++    if (calculate_PS(cmd, strlen(cmd), &d1, &d2, &d3, &d4, &d5, &d6) != 0) {
++      free(cmd);
+       return -1;
+-    if (spc_handler_xtx_gsave (0, 0) != 0)
++    }
++    if (spc_handler_xtx_gsave (0, 0) != 0) {
++      free(cmd);
+       return -1;
++    }
+     return spc_handler_xtx_do_transform (spe->x_user, spe->y_user, d1, d2, d3, d4, d5, d6);
+   }
++  free(cmd);
+   return  spc_handler_xtx_grestore (0, 0);
+ }
+ 
+@@ -570,7 +576,8 @@ spc_handler_ps_tricks_parse_path (struct
+       fwrite(args->curptr, 1, clip - args->curptr, fp);
+       fprintf(fp, " stroke ");
+       skip_white(&clip, args->endptr);
+-      parse_ident(&clip, args->endptr);
++      char *token = parse_ident(&clip, args->endptr);
++      free(token);
+       fwrite(clip, 1, args->endptr - clip, fp);
+     }
+ #endif
+@@ -610,7 +617,9 @@ spc_handler_ps_tricks_parse_path (struct
+   if (error) {
+     WARN("Image format conversion for PSTricks failed.");
+     RELEASE(gs_in);
++    RELEASE(gs_out);
+     gs_in = 0;
++    gs_out = 0;
+     return error;
+   }
+ 
+@@ -706,6 +715,7 @@ spc_handler_ps_tricks_render (struct spc
+       WARN("Image format conversion for PSTricks failed.");
+       RELEASE(gs_in);
+       gs_in = 0;
++      RELEASE(gs_out);
+       return error;
+     }
+ 
+@@ -1074,9 +1084,10 @@ int calculate_PS (char *string, int leng
+       fscanf(coord, " %lf %lf ", res1, res2);
+     else
+       fscanf(coord, " [%lf %lf %lf %lf %lf %lf] ", res1, res2, res3, res4, res5, res6);
+-  } else
++  } else {
++    RELEASE(cmd);
+     return -1;
+-
++  }
+   pclose(coord);
+   RELEASE(cmd);
+   dpx_delete_temp_file(formula, true);
+diff -up texlive-20180414/source/texk/dvipdfm-x/spc_util.c.me texlive-20180414/source/texk/dvipdfm-x/spc_util.c
+--- texlive-20180414/source/texk/dvipdfm-x/spc_util.c.me	2018-09-24 13:50:50.730216569 +0100
++++ texlive-20180414/source/texk/dvipdfm-x/spc_util.c	2018-09-24 13:54:23.844113385 +0100
+@@ -149,6 +149,7 @@ spc_read_color_color (struct spc_env *sp
+     char *color_name = parse_c_ident(&ap->curptr, ap->endptr);
+     if (!color_name) {
+       spc_warn(spe, "No valid spot color name specified?");
++      RELEASE(q);
+       return  -1;
+     }
+     skip_blank(&ap->curptr, ap->endptr);
+diff -up texlive-20180414/source/texk/dvipdfm-x/t1_load.c.me texlive-20180414/source/texk/dvipdfm-x/t1_load.c
+--- texlive-20180414/source/texk/dvipdfm-x/t1_load.c.me	2018-09-24 13:55:59.085854887 +0100
++++ texlive-20180414/source/texk/dvipdfm-x/t1_load.c	2018-09-24 13:58:52.979034543 +0100
+@@ -632,6 +632,9 @@ parse_subrs (cff_font *font,
+     if (!PST_INTEGERTYPE(tok) || pst_getIV(tok) < 0 ||
+         pst_getIV(tok) > CS_STR_LEN_MAX) {
+       RELEASE_TOK(tok);
++      if (offsets) RELEASE(offsets);
++      if (data)    RELEASE(data);
++      if (lengths) RELEASE(lengths);
+       return -1;
+     }
+     len = pst_getIV(tok);
+diff -up texlive-20180414/source/texk/dvipdfm-x/tt_cmap.c.me texlive-20180414/source/texk/dvipdfm-x/tt_cmap.c
+--- texlive-20180414/source/texk/dvipdfm-x/tt_cmap.c.me	2018-09-24 14:03:33.954172208 +0100
++++ texlive-20180414/source/texk/dvipdfm-x/tt_cmap.c	2018-09-24 14:07:07.738081269 +0100
+@@ -1237,6 +1237,7 @@ otf_create_ToUnicode_stream (const char
+   res_id = pdf_findresource("CMap", cmap_name);
+   if (res_id >= 0) {
+     RELEASE(cmap_name);
++    RELEASE(normalized_font_name);
+     cmap_ref = pdf_get_resource_reference(res_id);
+     return cmap_ref;
+   }
+@@ -1254,6 +1255,7 @@ otf_create_ToUnicode_stream (const char
+     sfont = dfont_open(fp, ttc_index);
+   } else  {
+     RELEASE(cmap_name);
++    RELEASE(normalized_font_name);
+     return NULL;
+   }
+ 
+diff -up texlive-20180414/source/texk/dvipng/dvipng-src/font.c.me texlive-20180414/source/texk/dvipng/dvipng-src/font.c
+diff -up texlive-20180414/source/texk/dvipng/dvipng-src/misc.c.me texlive-20180414/source/texk/dvipng/dvipng-src/misc.c
+diff -up texlive-20180414/source/texk/dvipng/dvipng-src/sfd.c.me texlive-20180414/source/texk/dvipng/dvipng-src/sfd.c
+--- texlive-20180414/source/texk/dvipng/dvipng-src/sfd.c.me	2018-09-24 14:25:21.188076748 +0100
++++ texlive-20180414/source/texk/dvipng/dvipng-src/sfd.c	2018-09-24 14:28:14.741252282 +0100
+@@ -139,8 +139,10 @@ struct psfontmap* FindSubFont(struct psf
+   sfdname[postfix-sfdspec]='\0';
+   /* Check postfix */
+   postfix++;
+-  if (strcmp(sfdwant+strlen(sfdwant)-strlen(postfix),postfix)!=0)
++  if (strcmp(sfdwant+strlen(sfdwant)-strlen(postfix),postfix)!=0) {
++    free(sfdname);
+     return(NULL);
++  }
+   /* Extract infix */
+   if ((infix=malloc(strlen(sfdwant)-strlen(postfix)+1))==NULL)
+     Fatal("cannot allocate memory for subfont infix");
+diff -up texlive-20180414/source/texk/dvipos/dvipos.c.me texlive-20180414/source/texk/dvipos/dvipos.c
+--- texlive-20180414/source/texk/dvipos/dvipos.c.me	2018-09-24 14:28:22.821400126 +0100
++++ texlive-20180414/source/texk/dvipos/dvipos.c	2018-09-24 14:33:37.367155421 +0100
+@@ -246,7 +246,7 @@ int main (int argc, char *argv[])
+ 
+   if (infname) free(infname);
+   if (outfname) free(outfname);
+-  if (bbxfname) free(frmfname);
++  if (bbxfname) free(bbxfname);
+   if (frmfname) free(frmfname);
+ 
+   if (outfp) fclose(outfp);
+diff -up texlive-20180414/source/texk/dvipsk/dospecial.c.me texlive-20180414/source/texk/dvipsk/dospecial.c
+diff -up texlive-20180414/source/texk/dvipsk/emspecial.c.me texlive-20180414/source/texk/dvipsk/emspecial.c
+--- texlive-20180414/source/texk/dvipsk/emspecial.c.me	2018-09-24 15:01:40.267917277 +0100
++++ texlive-20180414/source/texk/dvipsk/emspecial.c	2018-09-24 15:20:25.108474385 +0100
+@@ -811,8 +813,10 @@ MSP_2_ps(FILE *f, int wide, int high)
+ 	linelen = (halfword *) mymalloc((integer)sizeof(halfword) * high);
+ 	for (i = 0; i < high; i++) {
+ 		linelen[i] = readhalfword(f);
+-		if (feof(f))
++		if (feof(f)) {
++			free(linelen);
+ 			return;
++		}
+ 	}
+ 
+ 	line = (char *) mymalloc((integer)tobyte(wide));
+@@ -1308,6 +1312,8 @@ bmpgraph(FILE *f, char *filename, float
+ 		    default:
+ 			sprintf(errbuf,"em:graph: Unknown BMP compression\n");
+ 			specerror(errbuf);
++			if (line) free(line);
++			if (pshexa) free(pshexa);
+ 			return;
+ 		}
+ 
+--- texlive-20180414/source/texk/dvipsk/t1part.c.me	2018-09-24 15:47:04.767750977 +0100
++++ texlive-20180414/source/texk/dvipsk/t1part.c	2018-09-24 16:02:33.294747092 +0100
+@@ -2458,6 +2458,7 @@ Afm(void)
+             }
+         }
+     }
++    fclose(fafm);
+     return -2;
+ }
+ 
+@@ -2526,6 +2527,7 @@ FontPart(FILE *fout, unsigned char *font
+                 NameOfProgram();
+                 (void) fprintf(stderr,
+                 "Error: %s is not a valid PFA file\n", fontfile);
++		fclose(fin);
+                 return -1;
+             }
+ 
+@@ -2543,6 +2545,7 @@ FontPart(FILE *fout, unsigned char *font
+                 NameOfProgram();
+                 (void) fprintf(stderr,
+                 "Error: %s is not a valid PFB file\n", fontfile);
++		fclose(fin);
+                 return -1;
+             }
+             break;
+@@ -2677,6 +2680,7 @@ LoadVector(int num, CHAR *TmpChar)
+     }
+     else
+     {
++        fclose(fvect);
+         fprintf(stderr,"\n Error: ending token 'def' not found in <%s> \n",
+         psvectfile);
+         return -2;
+diff -up texlive-20180414/source/texk/dvisvgm/dvisvgm-src/libs/ff-woff/fontforge/splineorder2.c.me texlive-20180414/source/texk/dvisvgm/dvisvgm-src/libs/ff-woff/fontforge/splineorder2.c
+--- texlive-20180414/source/texk/dvisvgm/dvisvgm-src/libs/ff-woff/fontforge/splineorder2.c.me	2018-09-25 08:19:26.742304540 +0100
++++ texlive-20180414/source/texk/dvisvgm/dvisvgm-src/libs/ff-woff/fontforge/splineorder2.c	2018-09-25 08:20:04.753003584 +0100
+@@ -1289,9 +1289,9 @@ return;
+     unit.x = from->nextcp.x-from->me.x;
+     unit.y = from->nextcp.y-from->me.y;
+     len = sqrt(unit.x*unit.x + unit.y*unit.y);
+-    if ( len!=0 )
++    if ( len!=0 ) {
+ 	unit.x /= len; unit.y /= len;
+-
++    }
+     if ( (fpt = from->pointtype)==pt_hvcurve ) fpt = pt_curve;
+     if ( (tpt =   to->pointtype)==pt_hvcurve ) tpt = pt_curve;
+     if ( from->nextcpdef && to->prevcpdef ) switch ( fpt*3+tpt ) {
+diff -up texlive-20180414/source/texk/dvisvgm/dvisvgm-src/libs/ff-woff/fontforge/tottf.c.me texlive-20180414/source/texk/dvisvgm/dvisvgm-src/libs/ff-woff/fontforge/tottf.c
+--- texlive-20180414/source/texk/dvisvgm/dvisvgm-src/libs/ff-woff/fontforge/tottf.c.me	2018-09-25 09:12:58.071419844 +0100
++++ texlive-20180414/source/texk/dvisvgm/dvisvgm-src/libs/ff-woff/fontforge/tottf.c	2018-09-25 09:12:50.021271829 +0100
+@@ -4273,9 +4273,10 @@ return( NULL );
+ 		(subheadcnt-i)*sizeof(struct subhead) + sizeof(uint16);
+ 
+     sub = tmpfile2();
+-    if ( sub==NULL )
+-return( NULL );
+-
++    if ( sub==NULL ) {
++	free(glyphs);
++	return( NULL );
++    }
+     putshort(sub,2);		/* 8/16 format */
+     putshort(sub,0);		/* Subtable length, we'll come back and fix this */
+     putshort(sub,0);		/* version/language, not meaningful in ms systems */
+diff -up texlive-20180414/source/texk/dvisvgm/dvisvgm-src/libs/ff-woff/fontforge/ttfspecial.c.me texlive-20180414/source/texk/dvisvgm/dvisvgm-src/libs/ff-woff/fontforge/ttfspecial.c
+--- texlive-20180414/source/texk/dvisvgm/dvisvgm-src/libs/ff-woff/fontforge/ttfspecial.c.me	2018-09-25 09:50:27.032676224 +0100
++++ texlive-20180414/source/texk/dvisvgm/dvisvgm-src/libs/ff-woff/fontforge/ttfspecial.c	2018-09-25 09:47:22.249288133 +0100
+@@ -1343,6 +1343,8 @@ static void pfed_read_glyph_layer(FILE *
+ 		LogError(_("Whoops, Ran out of spiros\n"));
+ 	}
+     }
++    free(cur->layers);
++    free(cur);
+     free(contours);
+ }
+ 
+diff -up texlive-20180414/source/texk/kpathsea/cnf.c.me texlive-20180414/source/texk/kpathsea/cnf.c
+--- texlive-20180414/source/texk/kpathsea/cnf.c.me	2018-09-25 10:02:44.406129099 +0100
++++ texlive-20180414/source/texk/kpathsea/cnf.c	2018-09-25 10:50:20.648575054 +0100
+@@ -132,6 +132,8 @@ do_line (kpathsea kpse, string line)
+   while (len > 0 && ISSPACE (start[len - 1]))
+     len--;
+   if (len == 0) {
++    if (prog) free (prog);
++    if (var) free (var);
+     return ("No cnf value");
+   }
+   
+@@ -234,7 +236,6 @@ read_all_cnf (kpathsea kpse)
+       xfclose (cnf_file, *cnf);
+       free (*cnf);
+     }
+-    free (cnf_files);
+   } else {
+     string warn = getenv ("KPATHSEA_WARNING");
+     if (!(warn && STREQ (warn, "0"))) {
+@@ -243,6 +244,7 @@ read_all_cnf (kpathsea kpse)
+         cnf_path);
+     }
+   }
++  free (cnf_files);
+ }
+ 
+ /* Read the cnf files on the first call.  Return the first value in the
+diff -up texlive-20180414/source/texk/kpathsea/fontmap.c.me texlive-20180414/source/texk/kpathsea/fontmap.c
+--- texlive-20180414/source/texk/kpathsea/fontmap.c.me	2018-09-25 10:24:28.990061334 +0100
++++ texlive-20180414/source/texk/kpathsea/fontmap.c	2018-09-25 10:25:08.310783006 +0100
+@@ -162,6 +162,7 @@ read_all_maps (kpathsea kpse)
+     map_file_parse (kpse, *filenames);
+     filenames++;
+   }
++  free(filenames);
+ }
+ 
+ /* Look up KEY in texfonts.map's; if it's not found, remove any suffix
+diff -up texlive-20180414/source/texk/kpathsea/kpsewhich.c.me texlive-20180414/source/texk/kpathsea/kpsewhich.c
+--- texlive-20180414/source/texk/kpathsea/kpsewhich.c.me	2018-09-25 10:29:35.985696560 +0100
++++ texlive-20180414/source/texk/kpathsea/kpsewhich.c	2018-09-25 10:50:53.349178562 +0100
+@@ -742,7 +742,8 @@ kpathsea_set_program_enabled (kpse, fmt,
+   DISABLE_MKTEX (kpse_ocp_format);
+ 
+   /* NULL for no fallback font.  */
+-  kpathsea_init_prog (kpse, uppercasify (kpse->program_name), dpi, mode, NULL);
++  string PROG = uppercasify (kpse->program_name);
++  kpathsea_init_prog (kpse, PROG, dpi, mode, NULL);
+ 
+   /* Have to do this after setting the program name.  */
+   if (user_format_string) {
+@@ -752,6 +753,7 @@ kpathsea_set_program_enabled (kpse, fmt,
+                 user_format_string);
+     }
+   }
++  free(PROG);
+ }
+ 
+ 
+diff -up texlive-20180414/source/texk/kpathsea/mktexlsr.me texlive-20180414/source/texk/kpathsea/mktexlsr
+--- texlive-20180414/source/texk/kpathsea/mktexlsr.me	2018-08-14 09:49:37.815932357 +0100
++++ texlive-20180414/source/texk/kpathsea/mktexlsr	2018-08-14 09:51:12.685644501 +0100
+@@ -71,18 +71,18 @@ esac
+ 
+ if tty -s; then verbose=true; else verbose=false; fi
+ dry_run=false
+-trees=
++trees=mktexlsrtrees
+ 
+ # initialize treefile by either mktemp or some random name
+ # code taken from pdfjam and adjusted
+ {
+   treefile=`
+-    (umask 077 && mktemp "${TMPDIR-/tmp}/mktexlsrtrees.XXXXXXXXXX") 2>/dev/null
++    (umask 077 && mktemp "${TMPDIR-/tmp}/$trees.XXXXXXXXXX") 2>/dev/null
+   ` && test -n "$treefile" && test -f "$treefile"
+ } || {
+   ##  We'll use awk to make random number, for portability
+   random=`awk 'END { srand(); printf ("%d\n", rand()*1000000); }' /dev/null`
+-  treefile="${TMPDIR-/tmp}/mktexlsrtrees$$.$random"
++  treefile="${TMPDIR-/tmp}/$trees$$.$random"
+ } || exit $?
+ 
+ trap 'cd /; rm -f $treefile; test -z "$db_dir_tmp" || rm -rf "$db_dir_tmp"; 
+diff -up texlive-20180414/source/texk/kpathsea/tex-file.c.me texlive-20180414/source/texk/kpathsea/tex-file.c
+--- texlive-20180414/source/texk/kpathsea/tex-file.c.me	2018-09-25 10:47:56.305911131 +0100
++++ texlive-20180414/source/texk/kpathsea/tex-file.c	2018-09-25 13:11:34.995055022 +0100
+@@ -434,6 +434,7 @@ init_maketex (kpathsea kpse, kpse_file_f
+                                   kpse_src_client_cnf);
+   }
+ 
++  if (progval) free (progval);
+   free (PROG);
+ }
+ 
+diff -up texlive-20180414/source/texk/kpathsea/tex-glyph.c.me texlive-20180414/source/texk/kpathsea/tex-glyph.c
+--- texlive-20180414/source/texk/kpathsea/tex-glyph.c.me	2018-09-25 14:58:28.564047833 +0100
++++ texlive-20180414/source/texk/kpathsea/tex-glyph.c	2018-09-25 14:59:16.634928903 +0100
+@@ -177,7 +177,7 @@ try_fontmap (kpathsea kpse, const_string
+       *fontname_ptr = xstrdup (first_name);
+     }
+   }
+-
++  free (mapped_names);
+   return ret;
+ }
+ 
+diff -up texlive-20180414/source/texk/kpathsea/tex-make.c.me texlive-20180414/source/texk/kpathsea/tex-make.c
+--- texlive-20180414/source/texk/kpathsea/tex-make.c.me	2018-10-01 12:28:44.510074773 +0100
++++ texlive-20180414/source/texk/kpathsea/tex-make.c	2018-10-01 13:24:01.201630392 +0100
+@@ -116,8 +116,9 @@ misstex (kpathsea kpse, kpse_file_format
+ 
+     kpse->missfont
+       = missfont_name ? fopen (missfont_name, FOPEN_A_MODE) : NULL;
+-    if (!kpse->missfont && kpathsea_var_value (kpse, "TEXMFOUTPUT")) {
+-      missfont_name = concat3 (kpathsea_var_value (kpse, "TEXMFOUTPUT"),
++    char *texmfoutput = kpathsea_var_value (kpse, "TEXMFOUTPUT");
++    if (!kpse->missfont && texmfoutput) {
++      missfont_name = concat3 (texmfoutput,
+                                DIR_SEP_STRING, missfont_name);
+       kpse->missfont = fopen (missfont_name, FOPEN_A_MODE);
+     }
+@@ -125,6 +126,7 @@ misstex (kpathsea kpse, kpse_file_format
+     if (kpse->missfont)
+       fprintf (stderr, "kpathsea: Appending font creation commands to %s.\n",
+                missfont_name);
++    free (texmfoutput);
+   }
+ 
+   /* Write the command if we have a log file.  */
+@@ -439,6 +441,7 @@ kpathsea_make_tex (kpathsea kpse, kpse_f
+     if (base[0] == '-' /* || IS_DIR_SEP(base[0])  */) {
+       fprintf(stderr, "kpathsea:make_tex: Invalid filename `%s', starts with '%c'\n",
+               base, base[0]);
++      free (args);
+       return NULL;
+     }
+     for (i = 0; base[i]; i++) {
+@@ -451,6 +454,7 @@ kpathsea_make_tex (kpathsea kpse, kpse_f
+       {
+         fprintf(stderr, "kpathsea:make_tex: Invalid filename `%s', contains '%c'\n",
+                 base, base[i]);
++	free (args);
+         return NULL;
+       }
+     }
+diff -up texlive-20180414/source/texk/makeindexk/mkindex.me texlive-20180414/source/texk/makeindexk/mkindex
+--- texlive-20180414/source/texk/makeindexk/mkindex.me	2018-08-14 09:48:13.864392161 +0100
++++ texlive-20180414/source/texk/makeindexk/mkindex	2018-08-14 09:48:34.564771939 +0100
+@@ -13,7 +13,7 @@ unset RUNNING_BSH
+ progname=`basename $0`
+ case $# in
+   0) 
+-    echo "usage: `basename $0` file[.idx] ..." 1>&2
++    echo "usage: $progname file[.idx] ..." 1>&2
+     exit 1
+     ;;
+ esac
+diff -up texlive-20180414/source/texk/web2c/lib/openclose.c.me texlive-20180414/source/texk/web2c/lib/openclose.c
+--- texlive-20180414/source/texk/web2c/lib/openclose.c.me	2018-10-02 15:06:29.670502929 +0100
++++ texlive-20180414/source/texk/web2c/lib/openclose.c	2018-10-02 15:09:52.234270066 +0100
+@@ -303,6 +303,7 @@ open_output (FILE **f_ptr, const_string
+             fname = concat3(texmfoutput, DIR_SEP_STRING, nameoffile+1);
+             *f_ptr = fopen(fname, fopen_mode);
+         }
++	free (texmfoutput);
+     }
+     /* If this succeeded, change nameoffile accordingly.  */
+     if (*f_ptr) {
+diff -up texlive-20180414/source/texk/web2c/lib/texmfmp.c.me texlive-20180414/source/texk/web2c/lib/texmfmp.c
+--- texlive-20180414/source/texk/web2c/lib/texmfmp.c.me	2018-10-04 09:45:15.432099911 +0100
++++ texlive-20180414/source/texk/web2c/lib/texmfmp.c	2018-10-04 10:22:47.004046653 +0100
+@@ -654,7 +654,9 @@ static boolean
+ texmf_yesno(const_string var)
+ {
+   string value = kpse_var_value (var);
+-  return value && (*value == 't' || *value == 'y' || *value == '1');
++  boolean temp_value = (value && (*value == 't' || *value == 'y' || *value == '1'));
++  free (value);
++  return temp_value;
+ }
+ 
+ #ifdef pdfTeX
+@@ -899,6 +901,7 @@ maininit (int ac, string *av)
+     }
+     DUMP_VAR = concat (" ", with_ext); /* adjust array for Pascal */
+     DUMP_LENGTH_VAR = strlen (DUMP_VAR + 1);
++    free (with_ext);
+   } else {
+     /* For dump_name to be NULL is a bug.  */
+     abort();
+@@ -1379,11 +1382,9 @@ tcx_get_num (int upb,
+ void
+ readtcxfile (void)
+ {
+-  string orig_filename;
+   if (!find_suffix (translate_filename)) {
+     translate_filename = concat (translate_filename, ".tcx");
+   }
+-  orig_filename = translate_filename;
+   translate_filename
+     = kpse_find_file (translate_filename, kpse_web2c_format, true);
+   if (translate_filename) {
+@@ -1434,7 +1435,7 @@ readtcxfile (void)
+     }
+     xfclose(translate_file, translate_filename);
+   } else {
+-    WARNING1 ("Could not open char translation file `%s'", orig_filename);
++    WARNING1 ("Could not open char translation file `%s'", translate_filename);
+   }
+ }
+ #endif /* !Aleph && !XeTeX */
+@@ -2888,7 +2889,9 @@ boolean
+ isnewsource (strnumber srcfilename, int lineno)
+ {
+   char *name = gettexstring(srcfilename);
+-  return (compare_paths(name, last_source_name) != 0 || lineno != last_lineno);
++  boolean tmp_name = (compare_paths(name, last_source_name) != 0 || lineno != last_lineno);
++  free (name);
++  return tmp_name;
+ }
+ 
+ void
+@@ -2926,6 +2929,7 @@ makesrcspecial (strnumber srcfilename, i
+   while (*s)
+     strpool[poolptr++] = *s++;
+ 
++  free (filename);
+   return (oldpoolptr);
+ }
+ 
+@@ -3223,6 +3227,7 @@ void getfiledump(integer s, int offset,
+     recorder_record_input(file_name);
+     if (fseek(f, offset, SEEK_SET) != 0) {
+         xfree(file_name);
++        fclose(f);
+         return;
+     }
+     /* there is enough space in the string pool, the read
+diff -up texlive-20180414/source/texk/web2c/luatexdir/font/luafont.w.me texlive-20180414/source/texk/web2c/luatexdir/font/luafont.w
+--- texlive-20180414/source/texk/web2c/luatexdir/font/luafont.w.me	2018-10-04 10:46:48.310815583 +0100
++++ texlive-20180414/source/texk/web2c/luatexdir/font/luafont.w	2018-10-04 10:57:37.192864136 +0100
+@@ -1102,8 +1102,8 @@ static void font_char_from_lua(lua_State
+ {
+     int k, r, t, lt, u, n;
+     charinfo *co;
+-    kerninfo *ckerns;
+-    liginfo *cligs;
++    kerninfo *ckerns = NULL;
++    liginfo *cligs = NULL;
+     scaled j;
+     const char *s;
+     int nl = 0;                 /* number of ligature table items */
+@@ -1403,6 +1403,8 @@ static void font_char_from_lua(lua_State
+             lua_pop(L, 1);      /* ligatures table */
+         }
+     }
++    if (ckerns) free (ckerns);
++    if (cligs) free (cligs);
+ }
+ 
+ @ The caller has to fix the state of the lua stack when there is an error!
+diff -up texlive-20180414/source/texk/web2c/luatexdir/font/tfmofm.w.me texlive-20180414/source/texk/web2c/luatexdir/font/tfmofm.w
+--- texlive-20180414/source/texk/web2c/luatexdir/font/tfmofm.w.me	2018-10-04 11:06:22.002603849 +0100
++++ texlive-20180414/source/texk/web2c/luatexdir/font/tfmofm.w	2018-10-04 11:06:46.713062328 +0100
+@@ -1036,6 +1036,8 @@ int read_tfm_info(internal_font_number f
+         }
+     }
+ 
++    free (cligs);
++    free (ckerns);
+     cligs = NULL;
+     ckerns = NULL;
+ 
+diff -up texlive-20180414/source/texk/web2c/luatexdir/font/vfovf.w.me texlive-20180414/source/texk/web2c/luatexdir/font/vfovf.w
+--- texlive-20180414/source/texk/web2c/luatexdir/font/vfovf.w.me	2018-10-04 13:46:33.030731080 +0100
++++ texlive-20180414/source/texk/web2c/luatexdir/font/vfovf.w	2018-10-04 14:05:38.882001697 +0100
+@@ -760,6 +760,8 @@ void do_vf(internal_font_number f)
+             vf_read_u(4, utmp);
+             cc = (int) utmp;
+             if (!char_exists(f, cc)) {
++                if (vf_local_fnts) free (vf_local_fnts);
++                if (vf_real_fnts) free (vf_real_fnts);
+                 bad_vf("invalid character code");
+             }
+             vf_read(4, k);
+@@ -768,6 +770,8 @@ void do_vf(internal_font_number f)
+             packet_length = cmd;
+             vf_byte(cc);
+             if (!char_exists(f, cc)) {
++                if (vf_local_fnts) free (vf_local_fnts);
++                if (vf_real_fnts) free (vf_real_fnts);
+                 bad_vf("invalid character code");
+             }
+             vf_read_u(3, utmp);
+@@ -820,9 +824,12 @@ void do_vf(internal_font_number f)
+                 n = 0;
+                 while ((n < vf_nf) && (vf_local_fnts[n] != (unsigned) k))
+                     n++;
+-                if (n == vf_nf)
++                if (n == vf_nf) {
++                    if (vpackets) free (vpackets);
++                    if (vf_local_fnts) free (vf_local_fnts);
++                    if (vf_real_fnts) free (vf_real_fnts);
+                     bad_vf("undefined local font");
+-
++                }
+                 k = (int) vf_real_fnts[n];
+                 append_fnt_set(k);
+                 cmd_length = 0;
+@@ -938,8 +945,12 @@ void do_vf(internal_font_number f)
+                     vf_read_u((cmd - xxx1 + 1), utmp);
+                     cmd_length = (int) utmp;
+                     packet_length -= (cmd - xxx1 + 1);
+-                    if (cmd_length <= 0)
++                    if (cmd_length <= 0) {
++                       if (vpackets) free (vpackets);
++                       if (vf_local_fnts) free (vf_local_fnts);
++                       if (vf_real_fnts) free (vf_real_fnts);
+                         bad_vf("special of negative length");
++                    }
+                     packet_length -= (unsigned) cmd_length;
+ 
+                     append_packet(packet_special_code);
+@@ -982,6 +993,9 @@ void do_vf(internal_font_number f)
+                     break;
+                 case pop:
+                     if (stack_level == 0) {
++                       if (vpackets) free (vpackets);
++                       if (vf_local_fnts) free (vf_local_fnts);
++                       if (vf_real_fnts) free (vf_real_fnts);
+                         bad_vf("more POPs than PUSHs in character");
+                     } else {
+                         decr(stack_level);
+@@ -993,6 +1007,9 @@ void do_vf(internal_font_number f)
+                     }
+                     break;
+                 default:
++                    if (vf_local_fnts) free (vf_local_fnts);
++                    if (vf_real_fnts) free (vf_real_fnts);
++                    if (vpackets) free (vpackets);
+                     bad_vf("improver DVI command");
+                 }
+             }
+@@ -1000,18 +1017,26 @@ void do_vf(internal_font_number f)
+         /* signal end of packet */
+         append_packet(packet_end_code);
+ 
+-        if (stack_level != 0)
++        if (stack_level != 0) {
++            if (vf_local_fnts) free (vf_local_fnts);
++            if (vf_real_fnts) free (vf_real_fnts);
++            if (vpackets) free (vpackets);
+             bad_vf("more PUSHs than POPs in character packet");
++        }
+         if (packet_length != 0)
+             bad_vf("invalid packet length or DVI command in packet");
+         /* \.{Store the packet being built} */
+         set_charinfo_packets(co, vpackets);
+         vf_byte(cmd);
+     }
+-    if (cmd != post)
++    if (cmd != post) {
++        if (vf_local_fnts) free (vf_local_fnts);
++        if (vf_real_fnts) free (vf_real_fnts);
+         bad_vf("POST command expected");
+-
++    }
+     xfree(vf_buffer);
++    if (vf_local_fnts) free (vf_local_fnts);
++    if (vf_real_fnts) free (vf_real_fnts);
+ }
+ 
+ @ @c
+diff -up texlive-20180414/source/texk/web2c/luatexdir/font/writecff.w.me texlive-20180414/source/texk/web2c/luatexdir/font/writecff.w
+--- texlive-20180414/source/texk/web2c/luatexdir/font/writecff.w.me	2018-10-04 14:46:50.747887890 +0100
++++ texlive-20180414/source/texk/web2c/luatexdir/font/writecff.w	2018-10-04 16:09:12.999654546 +0100
+@@ -1105,6 +1105,7 @@ cff_font *read_cff(unsigned char *buf, l
+         if (n > idx->count - 1) {
+             normal_warning("cff","invalid fontset index number");
+             cff_close(cff);
++            cff_release_index(idx);
+             return NULL;
+         }
+         cff->name = idx;
+@@ -1121,6 +1122,7 @@ cff_font *read_cff(unsigned char *buf, l
+ 
+     if (n > idx->count - 1) {
+         normal_warning("cff","top DICT not exist");
++        cff_release_index(idx);
+         cff_close(cff);
+         return NULL;
+     }
+@@ -1128,6 +1130,7 @@ cff_font *read_cff(unsigned char *buf, l
+                                    idx->data + idx->offset[n + 1] - 1);
+     if (!cff->topdict) {
+         normal_warning("cff","parsing top DICT data failed");
++        cff_release_index(idx);
+         cff_close(cff);
+         return NULL;
+     }
+@@ -3037,6 +3040,7 @@ cffont->_string = NULL;
+             pdf_out_block(pdf, stream, l);
+             pdf_end_stream(pdf);
+             pdf_end_obj(pdf);
++            free(stream);
+         }
+     }
+     /*
+diff -up texlive-20180414/source/texk/web2c/luatexdir/font/writetype2.w.me texlive-20180414/source/texk/web2c/luatexdir/font/writetype2.w
+--- texlive-20180414/source/texk/web2c/luatexdir/font/writetype2.w.me	2018-10-04 16:13:09.614046152 +0100
++++ texlive-20180414/source/texk/web2c/luatexdir/font/writetype2.w	2018-10-04 16:13:43.084667255 +0100
+@@ -406,6 +406,7 @@ boolean make_tt_subset(PDF pdf, fd_entry
+                 pdf_out_block(pdf, stream, l);
+                 pdf_end_stream(pdf);
+                 pdf_end_obj(pdf);
++                free(stream);
+             }
+         }
+     }
