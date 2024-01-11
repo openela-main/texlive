@@ -1,0 +1,34 @@
+diff -up doc/latex/beamer/beamer-doc-test.sh.orig doc/latex/beamer/beamer-doc-test.sh
+--- doc/latex/beamer/beamer-doc-test.sh.orig	2022-12-12 11:09:20.845608798 +0100
++++ doc/latex/beamer/beamer-doc-test.sh	2022-12-12 11:10:23.512743150 +0100
+@@ -0,0 +1,30 @@
++#
++# shellscript to build beameruserguide without using l3build doc
++#
++
++for t in default circles rectangles rounded inmargin ; do
++   pdflatex "\def\themename{$t}\input beamerinnerthemeexample.tex"
++   mv beamerinnerthemeexample.pdf beameruginnertheme$t.pdf
++done
++
++for t in default crane albatross seahorse whale dolphin rose orchid sidebartab lily structure dove seagull beetle fly wolverine spruce beaver monarca albatrossstylish ; do
++   pdflatex "\def\themename{$t}\input beamercolorthemeexample.tex"
++   mv beamercolorthemeexample.pdf beamerugcolortheme$t.pdf
++done
++
++for t in default serif structurebold structureitalicserif structuresmallcapsserif ; do
++  pdflatex "\def\themename{$t}\input beamerfontthemeexample.tex"
++  mv beamerfontthemeexample.pdf beamerugfonttheme$t.pdf
++done
++
++for t in default infolines miniframes shadow sidebar smoothbars smoothtree split tree ; do
++  pdflatex "\def\themename{$t}\input beamerouterthemeexample.tex"
++  mv beamerouterthemeexample.pdf beamerugoutertheme$t.pdf
++done
++
++for t in AnnArbor Antibes Berkeley Berlin Bergen Boadilla Copenhagen Darmstadt Dresden EastLansing Frankfurt Goettingen Hannover Ilmenau JuanLesPins Luebeck Malmoe Madrid Marburg Montpellier PaloAlto Pittsburgh Rochester Singapore Szeged Warsaw CambridgeUS default boxes ; do
++  pdflatex "\def\themename{$t}\input beamerthemeexample.tex"
++  mv beamerthemeexample.pdf beamerugtheme$t.pdf
++done
++
++pdflatex beameruserguide

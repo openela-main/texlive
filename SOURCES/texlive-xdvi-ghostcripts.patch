@@ -1,0 +1,12 @@
+--- texlive-20180414-source/texk/xdvik/psgs.c       2016-11-25 19:24:41.000000000 +0100
++++ texlive-20200327-source/texk/xdvik/psgs.c       2020-03-01 20:07:53.000000000 +0100
+@@ -561,7 +561,8 @@
+ 	">> setuserparams .locksafe "
+ 	"} stopped pop\n";
+     static const char str1[] =
+-	"/xdvi$run {$error /newerror false put {currentfile cvx execute} stopped pop} "
++        "/xdvi$run "
++        "{$error /newerror false put currentfile cvx stopped {handleerror} if} "
+ 	"def "
+ 	"/xdvi$ack (\347\310\376) def "
+ 	"/xdvi$dslen countdictstack def "
